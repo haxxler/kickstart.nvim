@@ -99,7 +99,7 @@ do
   vim.g.maplocalleader = ' '
 
   -- Set to true if you have a Nerd Font installed and selected in the terminal
-  vim.g.have_nerd_font = false
+  vim.g.have_nerd_font = true
 
   -- [[ Setting options ]]
   --  See `:help vim.o`
@@ -126,6 +126,9 @@ do
 
   -- Enable break indent
   vim.o.breakindent = true
+  vim.o.tabstop = 4
+  vim.o.shiftwidth = 4
+  vim.o.expandtab = true
 
   -- Enable undo/redo changes even after closing and reopening a file
   vim.o.undofile = true
@@ -423,18 +426,20 @@ do
   -- change the command under that to load whatever the name of that colorscheme is.
   --
   -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-  vim.pack.add { gh 'folke/tokyonight.nvim' }
-  ---@diagnostic disable-next-line: missing-fields
-  require('tokyonight').setup {
-    styles = {
-      comments = { italic = false }, -- Disable italics in comments
+  vim.pack.add { gh 'ellisonleao/gruvbox.nvim'}
+  require('gruvbox').setup {
+    italic = {
+      strings = true,
+      emphasis = true,
+      comments = false, -- disable italics in comments
+      operators = false,
+      folds = true,
     },
+    transparent_mode = true, -- Let Ghostty's background opacity show through
   }
 
   -- Load the colorscheme here.
-  -- Like many other themes, this one has different styles, and you could load
-  -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-  vim.cmd.colorscheme 'tokyonight-night'
+  vim.cmd.colorscheme 'gruvbox'
 
   -- Highlight todo, notes, etc in comments
   vim.pack.add { gh 'folke/todo-comments.nvim' }
@@ -733,9 +738,12 @@ do
   --  See `:help lsp-config` for information about keys and how to configure
   ---@type table<string, vim.lsp.Config>
   local servers = {
-    -- clangd = {},
+    clangd = {},
     -- gopls = {},
-    -- pyright = {},
+    pyright = {
+      init_options = { disablePullDiagnostics = true },
+    },
+    ruff = {},
     -- tsc = {},
     --
     -- Some languages (like rust) have entire language plugins that can be useful:
@@ -1014,11 +1022,36 @@ do
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  -- require 'kickstart.plugins.debug'
+   require 'kickstart.plugins.debug'
   -- require 'kickstart.plugins.indent_line'
   -- require 'kickstart.plugins.lint'
   -- require 'kickstart.plugins.autopairs'
   -- require 'kickstart.plugins.neo-tree'
+  vim.pack.add { gh 'akinsho/toggleterm.nvim' }
+  require('toggleterm').setup {
+    open_mapping = [[<c-\>]],
+    directoin = 'vertical',
+    shell = vim.fn.has('win32') == 1 and 'pwsh' or vim.o.shell,
+  }
+  -- vim-tmux-navigator: Ctrl+h/j/k/l moves across nvim splits and tmux panes
+  -- Dafault mappings are off so Ctrl+\ stays free for toggleterm
+  vim.g.tmux_navigator_no_mappings = 1
+  vim.pack.add { gh 'christoomey/vim-tmux-navigator' }
+  vim.keymap.set('n', '<C-h>', '<cmd>TmuxNavigateLeft<cr>', { desc = 'Move focus left (nvim/tmux)' })
+  vim.keymap.set('n', '<C-j>', '<cmd>TmuxNavigateDown<cr>', { desc = 'Move focus down (nvim/tmux)' })
+  vim.keymap.set('n', '<C-k>', '<cmd>TmuxNavigateUp<cr>', { desc = 'Move focus up (nvim/tmux)' })
+  vim.keymap.set('n', '<C-l>', '<cmd>TmuxNavigateRight<cr>', { desc = 'Move focus right (nvim/tmux)' })
+  -- vim-slime: send code to the REPL in the other tmux pane (e.g. ipython)
+  vim.g.slime_target = 'tmux'
+  vim.g.slime_default_config = { socket_name = 'default', target_pane = '{last}' }
+  vim.g.slime_dont_ask_default = 1
+  vim.g.slime_bracketed_paste = 1
+  vim.g.slime_cell_delimiter = '# %%'
+  vim.pack.add { gh 'jpalardy/vim-slime' }
+  vim.keymap.set ('n', '<leader>rc', '<Plug>SlimeSendCell', { remap = true, desc = '[R]EPL: send [C]ell' })
+  vim.keymap.set ('n', '<leader>rl', '<Plug>SlimeLineSend', { remap = true, desc = '[R]EPL: send [L]ine' })
+  vim.keymap.set ('n', '<leader>rs', '<Plug>SlimeRegionSend', { remap = true, desc = '[R]EPL: send [S]election' })
+  
 
   -- NOTE: You can add your own plugins, configuration, etc. in `lua/custom/plugins/*.lua`.
   --

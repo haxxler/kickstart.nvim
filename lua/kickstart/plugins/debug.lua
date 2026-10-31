@@ -12,7 +12,6 @@ vim.pack.add {
   'https://github.com/nvim-neotest/nvim-nio',
   'https://github.com/mason-org/mason.nvim',
   'https://github.com/jay-babu/mason-nvim-dap.nvim',
-  'https://github.com/leoluz/nvim-dap-go',
 }
 
 -- Basic debugging keymaps, feel free to change to your liking!
@@ -35,13 +34,32 @@ require('mason-nvim-dap').setup {
 
   -- You can provide additional configuration to the handlers,
   -- see mason-nvim-dap README for more information
-  handlers = {},
+  handlers = {
+  -- Python: run the current file with the project's uv .venv interpreter
+  python = function(config)
+      config.configurations = {
+        {
+        type = 'python',
+        request = 'launch',
+        name = 'Python: current file (.venv)',
+        program = '${file}',
+        console = 'integratedTerminal',
+        pythonPath = function()
+          local root = vim.fs.root(0, '.venv')
+          if root then return root .. '/.venv/bin/python' end
+          return vim.fn.exepath 'python3'
+        end,
+      },
+  }
+  require('mason-nvim-dap').default_setup(config)
+  end,
+  },
 
   -- You'll need to check that you have the required things installed
   -- online, please don't ask me how to install them :)
   ensure_installed = {
     -- Update this to ensure that you have the debuggers for the langs you want
-    'delve',
+    'python',
   },
 }
 
@@ -85,11 +103,21 @@ dap.listeners.after.event_initialized['dapui_config'] = dapui.open
 dap.listeners.before.event_terminated['dapui_config'] = dapui.close
 dap.listeners.before.event_exited['dapui_config'] = dapui.close
 
--- Install golang specific config
-require('dap-go').setup {
-  delve = {
-    -- On Windows delve must be run attached or it crashes.
-    -- See https://github.com/leoluz/nvim-dap-go/blob/main/README.md#configuring
-    detached = vim.fn.has 'win32' == 0,
+-- C/C++ gdb 14+ supports DAP natively, so no separate adapter is needed
+dap.adapters.gdb = {
+  type = 'executable',
+  command = 'gdb',
+  args = { '--quiet', '--interpreter=dap' },
+}
+
+dap.configurations.c = {
+  {
+    name = 'Launch (gdb)',
+    type = 'gdb',
+    request = 'launch',
+    program = function() return vim.fn.input('Executable: ', vim.fn.getcwd() .. '/', 'file') end,
+    cwd = '${workspaceFolder}',
+    stopAtBeginningOfMainSubprogram = false,
   },
 }
+dap.configurations.cpp = dap.configurations.c
