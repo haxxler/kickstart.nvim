@@ -1037,10 +1037,27 @@ do
   -- Dafault mappings are off so Ctrl+\ stays free for toggleterm
   vim.g.tmux_navigator_no_mappings = 1
   vim.pack.add { gh 'christoomey/vim-tmux-navigator' }
-  vim.keymap.set('n', '<C-h>', '<cmd>TmuxNavigateLeft<cr>', { desc = 'Move focus left (nvim/tmux)' })
-  vim.keymap.set('n', '<C-j>', '<cmd>TmuxNavigateDown<cr>', { desc = 'Move focus down (nvim/tmux)' })
-  vim.keymap.set('n', '<C-k>', '<cmd>TmuxNavigateUp<cr>', { desc = 'Move focus up (nvim/tmux)' })
-  vim.keymap.set('n', '<C-l>', '<cmd>TmuxNavigateRight<cr>', { desc = 'Move focus right (nvim/tmux)' })
+  if vim.fn.has 'win32' == 1 then
+    -- Windows (psmux): the plugin runs tmux with shellcmdflag='-c',
+    -- which cmd.exe does not understand. Call tmux directly instead.
+    local function navigate(dir)
+      local win = vim.api.nvim_get_current_win()
+      vim.cmd('wincmd ' .. dir)
+      if vim.env.TMUX and win == vim.api.nvim_get_current_win() then
+        local flag = ({ h = 'L', j = 'D', k = 'U', l = 'R' })[dir]
+        vim.system { 'tmux', 'select-pane', '-' .. flag }
+      end
+    end
+    vim.keymap.set('n', '<C-h>', function() navigate 'h' end, { desc = 'Move focus left (nvim/psmux)' })
+    vim.keymap.set('n', '<C-j>', function() navigate 'j' end, { desc = 'Move focus down (nvim/psmux)' })
+    vim.keymap.set('n', '<C-k>', function() navigate 'k' end, { desc = 'Move focus up (nvim/psmux)' })
+    vim.keymap.set('n', '<C-l>', function() navigate 'l' end, { desc = 'Move focus right (nvim/psmux)' })
+  else
+    vim.keymap.set('n', '<C-h>', '<cmd>TmuxNavigateLeft<cr>', { desc = 'Move focus left (nvim/tmux)' })
+    vim.keymap.set('n', '<C-j>', '<cmd>TmuxNavigateDown<cr>', { desc = 'Move focus down (nvim/tmux)' })
+    vim.keymap.set('n', '<C-k>', '<cmd>TmuxNavigateUp<cr>', { desc = 'Move focus up (nvim/tmux)' })
+    vim.keymap.set('n', '<C-l>', '<cmd>TmuxNavigateRight<cr>', { desc = 'Move focus right (nvim/tmux)' })
+  end
   -- vim-slime: send code to the REPL in the other tmux pane (e.g. ipython)
   vim.g.slime_target = 'tmux'
   vim.g.slime_default_config = { socket_name = 'default', target_pane = '{last}' }
