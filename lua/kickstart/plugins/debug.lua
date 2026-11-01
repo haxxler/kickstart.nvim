@@ -57,10 +57,7 @@ require('mason-nvim-dap').setup {
 
   -- You'll need to check that you have the required things installed
   -- online, please don't ask me how to install them :)
-  ensure_installed = {
-    -- Update this to ensure that you have the debuggers for the langs you want
-    'python',
-  },
+  ensure_installed = vim.fn.has 'win32' == 1 and { 'python', 'cppdbg' } or { 'python' },
 }
 
 -- Dap UI setup
@@ -103,21 +100,47 @@ dap.listeners.after.event_initialized['dapui_config'] = dapui.open
 dap.listeners.before.event_terminated['dapui_config'] = dapui.close
 dap.listeners.before.event_exited['dapui_config'] = dapui.close
 
--- C/C++ gdb 14+ supports DAP natively, so no separate adapter is needed
-dap.adapters.gdb = {
-  type = 'executable',
-  command = 'gdb',
-  args = { '--quiet', '--interpreter=dap' },
-}
-
-dap.configurations.c = {
+if vim.fn.has 'win32' == 1 then
+  -- Windows: scoop gdb has no python, so gdb's native DAP is unavailable
+  -- Use Microsoft cpptools, which drives gdb through MI instead.
+  dap.adapters.cppdbg = {
+    id = 'cppdbg',
+    type = 'executable',
+    command = vim.fn.stdpath 'data'
+      .. '/mason/packages/cpptools/extension/debugAdapters/bin/OpenDebugAD7.exe',
+    options = { detached = false },
+  }
+  dap.configurations.c = {
   {
-    name = 'Launch (gdb)',
-    type = 'gdb',
-    request = 'launch',
-    program = function() return vim.fn.input('Executable: ', vim.fn.getcwd() .. '/', 'file') end,
-    cwd = '${workspaceFolder}',
-    stopAtBeginningOfMainSubprogram = false,
-  },
-}
+      name = 'Launch (cppdbg + gdb)',
+      type = 'cppdbg',
+      request = 'launch',
+      program = function()
+        return vim.fn.input('Executable: ', vim.fn.getcwd() .. '/', 'file')
+      end,
+      cwd = '${workspaceFolder}',
+      stopAtEntry = false,
+      MIMode = 'gdb',
+      miDebuggerPath = vim.fn.expand '~/scoop/apps/gdb/current/bin/gdb.exe'
+    },
+  }
+else
+  -- C/C++ gdb 14+ supports DAP natively, so no separate adapter is needed
+  dap.adapters.gdb = {
+    type = 'executable',
+    command = 'gdb',
+    args = { '--quiet', '--interpreter=dap' },
+  }
+
+  dap.configurations.c = {
+    {
+      name = 'Launch (gdb)',
+      type = 'gdb',
+      request = 'launch',
+      program = function() return vim.fn.input('Executable: ', vim.fn.getcwd() .. '/', 'file') end,
+      cwd = '${workspaceFolder}',
+      stopAtBeginningOfMainSubprogram = false,
+    },
+  }
+end
 dap.configurations.cpp = dap.configurations.c
