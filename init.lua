@@ -1060,7 +1060,13 @@ do
   end
   -- vim-slime: send code to the REPL in the other tmux pane (e.g. ipython)
   vim.g.slime_target = 'tmux'
-  vim.g.slime_default_config = { socket_name = 'default', target_pane = '{last}' }
+  if vim.fn.has 'win32' == 1 then
+    -- psmux: '-L default' and '{last}' are not supported; use the socket path
+    -- from $TMUX and a 0-based pane index (the pane right of nvim).
+    vim.g.slime_default_config = { socket_name = vim.split(vim.env.TMUX or 'default', ',')[1], target_pane = ':.1'}
+  else
+    vim.g.slime_default_config = { socket_name = 'default', target_pane = '{last}' }
+  end
   vim.g.slime_dont_ask_default = 1
   vim.g.slime_bracketed_paste = 1
   vim.g.slime_cell_delimiter = '# %%'
