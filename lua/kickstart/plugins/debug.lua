@@ -35,24 +35,28 @@ require('mason-nvim-dap').setup {
   -- You can provide additional configuration to the handlers,
   -- see mason-nvim-dap README for more information
   handlers = {
-  -- Python: run the current file with the project's uv .venv interpreter
-  python = function(config)
+    -- Python: run the current file with the project's uv .venv interpreter
+    python = function(config)
       config.configurations = {
         {
-        type = 'python',
-        request = 'launch',
-        name = 'Python: current file (.venv)',
-        program = '${file}',
-        console = 'integratedTerminal',
-        pythonPath = function()
-          local root = vim.fs.root(0, '.venv')
-          if root then return root .. '/.venv/bin/python' end
-          return vim.fn.exepath 'python3'
-        end,
-      },
-  }
-  require('mason-nvim-dap').default_setup(config)
-  end,
+          type = 'python',
+          request = 'launch',
+          name = 'Python: current file (.venv)',
+          program = '${file}',
+          console = 'integratedTerminal',
+          pythonPath = function()
+            local root = vim.fs.root(0, '.venv')
+            if root then return root .. (vim.fn.has 'win32' == 1 and '/.venv/Scripts/python.exe' or '/.venv/bin/python') end
+            return vim.fn.exepath 'python3'
+          end,
+        },
+      }
+      if vim.fn.has 'win32' == 1 then
+        -- Windows: a detached adapter gets its own console, so nvim never sees its output.
+        config.adapters.options = { detached = false }
+      end
+      require('mason-nvim-dap').default_setup(config)
+    end,
   },
 
   -- You'll need to check that you have the required things installed
@@ -97,8 +101,9 @@ dapui.setup {
 -- end
 
 dap.listeners.after.event_initialized['dapui_config'] = dapui.open
-dap.listeners.before.event_terminated['dapui_config'] = dapui.close
-dap.listeners.before.event_exited['dapui_config'] = dapui.close
+-- keep dap-ui open after the session ends so the console output stays visible; close with <F7>.
+-- dap.listeners.before.event_terminated['dapui_config'] = dapui.close
+-- dap.listeners.before.event_exited['dapui_config'] = dapui.close
 
 if vim.fn.has 'win32' == 1 then
   -- Windows: scoop gdb has no python, so gdb's native DAP is unavailable
@@ -106,22 +111,19 @@ if vim.fn.has 'win32' == 1 then
   dap.adapters.cppdbg = {
     id = 'cppdbg',
     type = 'executable',
-    command = vim.fn.stdpath 'data'
-      .. '/mason/packages/cpptools/extension/debugAdapters/bin/OpenDebugAD7.exe',
+    command = vim.fn.stdpath 'data' .. '/mason/packages/cpptools/extension/debugAdapters/bin/OpenDebugAD7.exe',
     options = { detached = false },
   }
   dap.configurations.c = {
-  {
+    {
       name = 'Launch (cppdbg + gdb)',
       type = 'cppdbg',
       request = 'launch',
-      program = function()
-        return vim.fn.input('Executable: ', vim.fn.getcwd() .. '/', 'file')
-      end,
+      program = function() return vim.fn.input('Executable: ', vim.fn.getcwd() .. '/', 'file') end,
       cwd = '${workspaceFolder}',
       stopAtEntry = false,
       MIMode = 'gdb',
-      miDebuggerPath = vim.fn.expand '~/scoop/apps/gdb/current/bin/gdb.exe'
+      miDebuggerPath = vim.fn.expand '~/scoop/apps/gdb/current/bin/gdb.exe',
     },
   }
 else
